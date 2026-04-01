@@ -159,6 +159,103 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 /* TOAST */
 .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--text); color:#fff; padding:8px 16px; border-radius:10px; font-size:0.82rem; z-index:999; opacity:0; transition:all 0.3s; white-space:nowrap; }
 .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+/* ===================== MOBILE / RESPONSIVE ===================== */
+@media (max-width: 700px) {
+  :root { --sidebar-w: 100%; }
+
+  body { height: 100dvh; overflow: hidden; }
+
+  /* HEADER compacto */
+  .header { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
+  .logo { font-size: 0.82rem; }
+  .client-name-input { width: 110px; font-size: 0.7rem; }
+  .header-controls { gap: 5px; }
+  .color-control span { display: none; }
+  .btn { padding: 5px 9px; font-size: 0.72rem; }
+  /* Esconde label dos botões, mantém ícone */
+  .btn-ghost .btn-label, .btn-primary .btn-label { display: none; }
+
+  /* APP vira coluna: canvas em cima, sidebar embaixo como bottom-nav */
+  .app-body { flex-direction: column-reverse; }
+
+  /* SIDEBAR vira barra de navegação inferior */
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    padding: 6px 8px;
+    border-right: none;
+    border-top: 1.5px solid var(--border);
+    gap: 6px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    height: 68px;
+  }
+  .logo-upload-area {
+    width: 48px;
+    min-height: 48px;
+    border-bottom: none;
+    border-right: 1.5px solid var(--border);
+    border-radius: 10px;
+    flex-shrink: 0;
+    padding: 4px;
+  }
+  .logo-upload-area img { max-width: 36px; max-height: 36px; }
+  .logo-hint { font-size: 0.5rem; }
+  .sidebar-label { display: none; }
+  .tab {
+    width: auto;
+    min-width: 64px;
+    flex-direction: column;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    transform: none !important;
+  }
+  .tab:hover { transform: none !important; }
+  .tab.active { transform: none !important; box-shadow: 0 -3px 12px rgba(26,86,219,0.15); }
+  .tab-sub { font-size: 0.5rem; max-width: 60px; }
+  .tab-badge { top: 3px; right: 3px; width: 14px; height: 14px; font-size: 0.5rem; }
+
+  /* TOPBAR compacta */
+  .panel-topbar { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
+  .horizon-tag { font-size: 1.1rem; }
+  .horizon-name-input { font-size: 0.8rem; min-width: 80px; max-width: 120px; }
+  .horizon-note { font-size: 0.75rem; min-height: 30px; max-height: 54px; padding: 5px 8px; }
+  .add-card-btn { padding: 7px 10px; font-size: 0.75rem; }
+
+  /* TOOLBAR — esconde o hint, botões menores */
+  .toolbar { padding: 5px 12px; gap: 5px; flex-wrap: nowrap; overflow-x: auto; }
+  .toolbar-btn { padding: 5px 9px; font-size: 0.72rem; white-space: nowrap; }
+  .toolbar-hint { display: none; }
+
+  /* MINIMAP menor no mobile */
+  .minimap { width: 100px; height: 64px; bottom: 8px; right: 8px; }
+
+  /* MODAL ocupa mais largura */
+  .modal { width: calc(100vw - 32px); max-width: 360px; padding: 20px; }
+
+  /* CARDS — ações sempre visíveis no touch */
+  .card-actions { opacity: 1 !important; }
+  .bullet-del { opacity: 1 !important; }
+  .remove-img { display: flex !important; }
+  .logo-remove { display: flex !important; }
+  .resize-handle svg { opacity: 0.5 !important; }
+
+  /* Toast sobe acima da bottom-nav */
+  .toast { bottom: 80px; }
+}
+
+/* Tablet intermediário */
+@media (min-width: 701px) and (max-width: 1024px) {
+  :root { --sidebar-w: 88px; }
+  .header { padding: 9px 16px; }
+  .panel-topbar { padding: 10px 16px; }
+  .toolbar { padding: 6px 16px; }
+  .toolbar-hint { font-size: 0.68rem; }
+}
 </style>
 </head>
 <body>
@@ -344,7 +441,7 @@ function switchTab(hz,el){
 }
 function syncTabSub(hz,v){document.getElementById('tabsub-'+hz).textContent=v||hz.toUpperCase();state[hz].name=v;}
 
-// PAN & ZOOM
+// PAN & ZOOM — mouse
 HZS.forEach(hz=>{
   const board=document.getElementById('board-'+hz);
   board.addEventListener('wheel',e=>{
@@ -365,7 +462,49 @@ HZS.forEach(hz=>{
       board.style.cursor='grabbing';e.preventDefault();
     }
   });
+
+  // PAN & PINCH-ZOOM — touch
+  let _touches={};let _lastDist=null;
+  board.addEventListener('touchstart',e=>{
+    Array.from(e.changedTouches).forEach(t=>{_touches[t.identifier]={x:t.clientX,y:t.clientY};});
+    const ids=Object.keys(_touches);
+    if(ids.length===1){
+      // 1 dedo → pan
+      const t=e.touches[0];
+      const isPanTarget=e.target===board||e.target.classList.contains('canvas-grid')||e.target.classList.contains('canvas-drop-zone')||e.target.classList.contains('canvas-viewport');
+      if(isPanTarget){panning=true;ps={x:t.clientX-vs[hz].x,y:t.clientY-vs[hz].y};}
+    } else if(ids.length===2){
+      // 2 dedos → pinch
+      panning=false;
+      const ts=e.touches;_lastDist=Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
+    }
+  },{passive:true});
+
+  board.addEventListener('touchmove',e=>{
+    const ts=e.touches;
+    if(ts.length===1&&panning){
+      vs[hz].x=ts[0].clientX-ps.x;vs[hz].y=ts[0].clientY-ps.y;
+      applyVP(hz);e.preventDefault();
+    } else if(ts.length===2&&_lastDist!==null){
+      const dist=Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
+      const r=board.getBoundingClientRect();
+      const mx=(ts[0].clientX+ts[1].clientX)/2-r.left;
+      const my=(ts[0].clientY+ts[1].clientY)/2-r.top;
+      const factor=dist/_lastDist;
+      const v=vs[hz];
+      const ns=Math.min(2.5,Math.max(0.2,v.s*factor));
+      v.x=mx-(mx-v.x)*(ns/v.s);v.y=my-(my-v.y)*(ns/v.s);v.s=ns;
+      _lastDist=dist;applyVP(hz);e.preventDefault();
+    }
+  },{passive:false});
+
+  board.addEventListener('touchend',e=>{
+    Array.from(e.changedTouches).forEach(t=>{delete _touches[t.identifier];});
+    if(Object.keys(_touches).length<2)_lastDist=null;
+    if(Object.keys(_touches).length===0)panning=false;
+  },{passive:true});
 });
+
 document.addEventListener('mousemove',e=>{
   if(!panning)return;
   vs[curTab].x=e.clientX-ps.x;vs[curTab].y=e.clientY-ps.y;
@@ -470,7 +609,7 @@ function syncBullets(hz,id){
   saveAll();
 }
 
-// DRAG
+// DRAG — mouse
 function initDrag(card,hz,id){
   const h=card.querySelector('.card-header');
   h.addEventListener('mousedown',e=>{
@@ -483,10 +622,25 @@ function initDrag(card,hz,id){
     function up(){card.classList.remove('dragging');const cd=getCD(hz,id);if(cd){cd.x=parseFloat(card.style.left);cd.y=parseFloat(card.style.top);}saveAll();updateMM(hz);document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);}
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   });
+  // DRAG — touch
+  h.addEventListener('touchstart',e=>{
+    if(['INPUT','BUTTON','TEXTAREA'].includes(e.target.tagName))return;
+    if(e.touches.length!==1)return;
+    if(cm[hz]){startConn(hz,id);return;}
+    e.stopPropagation();
+    const t=e.touches[0],v=vs[hz];
+    const sx=t.clientX,sy=t.clientY,sl=parseFloat(card.style.left),st=parseFloat(card.style.top);
+    card.classList.add('dragging');
+    function mv(e){if(e.touches.length!==1)return;const t=e.touches[0];card.style.left=Math.max(0,sl+(t.clientX-sx)/v.s)+'px';card.style.top=Math.max(0,st+(t.clientY-sy)/v.s)+'px';redrawConn(hz);e.preventDefault();}
+    function up(){card.classList.remove('dragging');const cd=getCD(hz,id);if(cd){cd.x=parseFloat(card.style.left);cd.y=parseFloat(card.style.top);}saveAll();updateMM(hz);h.removeEventListener('touchmove',mv);h.removeEventListener('touchend',up);}
+    h.addEventListener('touchmove',mv,{passive:false});
+    h.addEventListener('touchend',up,{once:true});
+  },{passive:true});
 }
 
-// RESIZE
+// RESIZE — mouse + touch
 function initResize(handle,hz,id){
+  // mouse
   handle.addEventListener('mousedown',e=>{
     e.preventDefault();e.stopPropagation();
     const card=document.getElementById(id),v=vs[hz];
@@ -495,6 +649,17 @@ function initResize(handle,hz,id){
     function up(){const cd=getCD(hz,id);const c=document.getElementById(id);if(cd){cd.w=parseFloat(c.style.width);cd.h=parseFloat(c.style.minHeight);}saveAll();updateMM(hz);document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);}
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   });
+  // touch
+  handle.addEventListener('touchstart',e=>{
+    e.preventDefault();e.stopPropagation();
+    const card=document.getElementById(id),v=vs[hz];
+    const t=e.touches[0],sx=t.clientX,sy=t.clientY;
+    const sw=parseFloat(card.style.width)||card.offsetWidth,sh=parseFloat(card.style.minHeight)||card.offsetHeight;
+    function mv(e){if(!e.touches.length)return;const t=e.touches[0];card.style.width=Math.max(180,sw+(t.clientX-sx)/v.s)+'px';card.style.minHeight=Math.max(150,sh+(t.clientY-sy)/v.s)+'px';redrawConn(hz);e.preventDefault();}
+    function up(){const cd=getCD(hz,id);const c=document.getElementById(id);if(cd){cd.w=parseFloat(c.style.width);cd.h=parseFloat(c.style.minHeight);}saveAll();updateMM(hz);handle.removeEventListener('touchmove',mv);handle.removeEventListener('touchend',up);}
+    handle.addEventListener('touchmove',mv,{passive:false});
+    handle.addEventListener('touchend',up,{once:true});
+  },{passive:false});
 }
 
 // CONNECTIONS
