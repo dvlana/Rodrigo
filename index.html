@@ -1,6 +1,91 @@
-// --- CONFIGURAÇÃO FIREBASE ---
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Método dos 3 Horizontes - Cloud</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* --- ESTILOS ORIGINAIS MANTIDOS PARA CONSISTÊNCIA --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #1a56db; --primary-light: #e8f0fe; --accent: #f97316;
+  --bg: #f0f4ff; --surface: #ffffff; --border: #dde3f0;
+  --text: #0f172a; --text-muted: #64748b; --shadow: 0 4px 24px rgba(26,86,219,0.10);
+  --radius: 14px; --sidebar-w: 112px;
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:11px 22px; background:var(--surface); border-bottom:1.5px solid var(--border); flex-shrink:0; z-index:100; gap:14px; }
+.header-left { display:flex; flex-direction:column; gap:1px; }
+.logo { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; color:var(--primary); letter-spacing:-0.5px; white-space:nowrap; }
+.logo span { color:var(--accent); }
+.client-name-input { font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--text-muted); border:none; outline:none; background:transparent; font-weight:400; width:200px; padding:0; }
+.header-controls { display:flex; align-items:center; gap:8px; }
+.btn { display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:8px; font-size:0.8rem; font-weight:500; cursor:pointer; border:none; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-ghost { background:transparent; color:var(--text-muted); border:1.5px solid var(--border); }
+.app-body { display:flex; flex:1; overflow:hidden; }
+.sidebar { width:var(--sidebar-w); background:var(--surface); border-right:1.5px solid var(--border); display:flex; flex-direction:column; align-items:center; padding-bottom:16px; gap:8px; flex-shrink:0; }
+.tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; width:82px; padding:15px 6px; font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; cursor:pointer; border:2px solid transparent; background:var(--bg); color:var(--text-muted); border-radius:14px; transition:all 0.22s; position:relative; }
+.tab.active { color:var(--primary); background:var(--primary-light); border-color:var(--primary); }
+.main-content { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+.canvas-panel { display:none; flex:1; flex-direction:column; overflow:hidden; }
+.canvas-panel.active { display:flex; }
+.panel-topbar { display:flex; align-items:center; gap:12px; padding:12px 22px; background:var(--surface); border-bottom:1.5px solid var(--border); }
+.canvas-board { flex:1; position:relative; overflow:hidden; background: #f8fafc; }
+.canvas-viewport { position:absolute; inset:0; transform-origin:0 0; }
+.s-card { position:absolute; background:var(--surface); border-radius:var(--radius); border:2px solid var(--border); box-shadow:var(--shadow); min-width:220px; z-index:10; display:flex; flex-direction:column; }
+.card-header { padding:10px; cursor:grab; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.card-title-input { border:none; outline:none; font-weight:bold; width:100%; font-size:0.85rem; }
+.card-body { padding:10px; flex:1; }
+.card-text-input { width:100%; min-height:60px; border:1px solid var(--border); border-radius:6px; padding:5px; font-size:0.8rem; resize:none; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:20px; opacity:0; transition:0.3s; z-index:1000; pointer-events:none; }
+.toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">Método dos 3 Horizontes <span>·</span></div>
+    <input class="client-name-input" id="clientNameInput" placeholder="Nome do cliente..." maxlength="60">
+  </div>
+  <div class="header-controls">
+    <button class="btn btn-ghost" id="exportPngBtn">🖼️ PNG</button>
+    <input type="color" id="globalColorPicker" value="#1a56db" style="width:30px; border:none; cursor:pointer;">
+  </div>
+</header>
+
+<div class="app-body">
+  <aside class="sidebar">
+    <div style="height:20px"></div>
+    <button class="tab active" data-hz="h1">H1<span style="font-size:10px">Atual</span></button>
+    <button class="tab" data-hz="h2">H2<span style="font-size:10px">Transição</span></button>
+    <button class="tab" data-hz="h3">H3<span style="font-size:10px">Futuro</span></button>
+  </aside>
+
+  <main class="main-content">
+    <div class="canvas-panel active">
+      <div class="panel-topbar">
+        <h2 id="horizonTitle">Horizonte 1</h2>
+        <button class="btn btn-primary" id="addCardBtn">＋ Novo Card</button>
+      </div>
+      <div class="canvas-board" id="board-container">
+        <div class="canvas-viewport" id="viewport">
+            <svg id="connections-layer" style="position:absolute; width:4000px; height:4000px; pointer-events:none;"></svg>
+            <div id="card-layer" style="position:absolute; width:4000px; height:4000px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// --- FIREBASE SETUP ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
@@ -15,136 +100,105 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// --- ESTADO GLOBAL ---
-const HZS = ['h1', 'h2', 'h3'];
+// --- APP STATE ---
+let currentHz = 'h1';
 let state = {
-  h1: { cards: [], connections: [], note: '', name: 'Operação Atual' },
-  h2: { cards: [], connections: [], note: '', name: 'Próxima Curva' },
-  h3: { cards: [], connections: [], note: '', name: 'Futuro' }
+    h1: { cards: [] }, h2: { cards: [] }, h3: { cards: [] }
 };
-let vs = { h1: { x: 40, y: 40, s: 1 }, h2: { x: 40, y: 40, s: 1 }, h3: { x: 40, y: 40, s: 1 } };
-let curTab = 'h1', cid = Date.now();
-let cm = { h1: false, h2: false, h3: false }, cf = { h1: null, h2: null, h3: null };
-let panning = false, ps = { x: 0, y: 0 };
+let view = { x: 50, y: 50, zoom: 1 };
 
-// --- PERSISTÊNCIA FIREBASE ---
+// --- CORE FUNCTIONS ---
+const showToast = (m) => { const t = document.getElementById('toast'); t.textContent = m; t.className = 'toast show'; setTimeout(() => t.className = 'toast', 2000); };
+
 async function saveAll() {
-  const clientName = document.getElementById('clientNameInput')?.value || '';
-  const color = document.getElementById('globalColorPicker')?.value || '#1a56db';
-  
-  // Atualiza notas e nomes no estado antes de salvar
-  HZS.forEach(hz => {
-    state[hz].note = document.getElementById('note-' + hz)?.value || '';
-    state[hz].name = document.getElementById('hname-' + hz)?.value || state[hz].name;
-  });
-
-  try {
-    await setDoc(doc(db, "projetos", "canvas_atual"), {
-      state, vs, color, clientName, cid,
-      lastUpdate: new Date().toISOString()
-    });
-    showToast("Sincronizado na nuvem");
-  } catch (e) {
-    console.error("Erro ao salvar:", e);
-  }
+    const data = {
+        state, 
+        clientName: document.getElementById('clientNameInput').value,
+        themeColor: document.getElementById('globalColorPicker').value,
+        updatedAt: new Date().toISOString()
+    };
+    try {
+        await setDoc(doc(db, "projeto", "atual"), data);
+        localStorage.setItem('backup_3h', JSON.stringify(data));
+        showToast("Salvo na nuvem");
+    } catch(e) { console.error(e); }
 }
 
 async function loadAll() {
-  try {
-    const docSnap = await getDoc(doc(db, "projetos", "canvas_atual"));
-    if (!docSnap.exists()) return;
-
-    const data = docSnap.data();
-    if (data.color) {
-        document.getElementById('globalColorPicker').value = data.color;
-        applyColor(data.color);
+    const snap = await getDoc(doc(db, "projeto", "atual"));
+    if (snap.exists()) {
+        const d = snap.data();
+        state = d.state;
+        document.getElementById('clientNameInput').value = d.clientName || '';
+        document.getElementById('globalColorPicker').value = d.themeColor || '#1a56db';
+        render();
     }
-    cid = data.cid || Date.now();
-    document.getElementById('clientNameInput').value = data.clientName || '';
+}
 
-    HZS.forEach(hz => {
-      if (!data.state[hz]) return;
-      Object.assign(state[hz], data.state[hz]);
-      
-      // UI
-      const ne = document.getElementById('note-' + hz);
-      if (ne) { ne.value = state[hz].note; autoResize(ne); }
-      const nm = document.getElementById('hname-' + hz);
-      if (nm) { nm.value = state[hz].name; syncTabSub(hz, state[hz].name); }
-      
-      // Renderizar cards
-      state[hz].cards.forEach(cd => renderCard(hz, cd));
-      
-      // Viewport
-      if (data.vs[hz]) Object.assign(vs[hz], data.vs[hz]);
-      applyVP(hz);
-      updateBadge(hz);
-      updateEmpty(hz);
+function render() {
+    const layer = document.getElementById('card-layer');
+    layer.innerHTML = '';
+    state[currentHz].cards.forEach(card => {
+        const div = document.createElement('div');
+        div.className = 's-card';
+        div.style.left = card.x + 'px';
+        div.style.top = card.y + 'px';
+        div.innerHTML = `
+            <div class="card-header"><input class="card-title-input" value="${card.title}"></div>
+            <div class="card-body">
+                <textarea class="card-text-input">${card.text || ''}</textarea>
+            </div>
+        `;
+        
+        // Simples drag logic
+        div.onmousedown = (e) => {
+            if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            let sx = e.clientX, sy = e.clientY;
+            document.onmousemove = (em) => {
+                card.x += (em.clientX - sx);
+                card.y += (em.clientY - sy);
+                div.style.left = card.x + 'px';
+                div.style.top = card.y + 'px';
+                sx = em.clientX; sy = em.clientY;
+            };
+            document.onmouseup = () => { document.onmousemove = null; saveAll(); };
+        };
+        
+        layer.appendChild(div);
     });
-    
-    setTimeout(() => HZS.forEach(hz => redrawConn(hz)), 200);
-  } catch (e) {
-    console.error("Erro ao carregar:", e);
-  }
 }
 
-// --- GESTÃO DE IMAGENS (FIREBASE STORAGE) ---
-async function handleImg(hz, id, input) {
-  const file = input.files[0];
-  if (!file) return;
-  
-  showToast("Enviando imagem...");
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const storageRef = ref(storage, `cards/${id}_${Date.now()}`);
-    try {
-      await uploadString(storageRef, e.target.result, 'data_url');
-      const url = await getDownloadURL(storageRef);
-      
-      const cd = getCD(hz, id);
-      if (cd) cd.image = url;
-      
-      const area = document.getElementById(`ia-${id}`);
-      area.innerHTML = `<img src="${url}"><input type="file" accept="image/*" onchange="handleImg('${hz}','${id}',this)"><button class="remove-img" onclick="rmImg('${hz}','${id}',event)">✕</button>`;
-      saveAll();
-    } catch (err) {
-      showToast("Erro no upload");
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
-// --- FUNÇÕES DE INTERFACE (ADAPTADAS) ---
-window.confirmModal = function() {
-    const t = document.getElementById('modal-title').value.trim() || 'Novo Card';
-    closeModal();
-    createCard(modalHz, t);
+// --- EVENTS ---
+document.getElementById('addCardBtn').onclick = () => {
+    state[currentHz].cards.push({ id: Date.now(), title: 'Novo Card', x: 100, y: 100, text: '' });
+    render();
+    saveAll();
 };
 
-function createCard(hz, title) {
-  const id = 'c' + (++cid);
-  const cd = { id, title, x: 100, y: 100, w: 240, h: 200, color: '#1a56db', text: '', image: null, mode: 'text', bullets: [] };
-  state[hz].cards.push(cd);
-  renderCard(hz, cd);
-  updateBadge(hz);
-  updateEmpty(hz);
-  saveAll();
-}
-
-// ... (Mantenha as funções renderCard, initDrag, initResize, redrawConn idênticas ao seu original)
-// Certifique-se de que as chamadas de "saveAll()" permaneçam nos eventos de input/change
-
-// INICIALIZAÇÃO
-window.addEventListener('DOMContentLoaded', () => {
-    loadAll();
-    // Exponha funções necessárias ao escopo global para os botões do HTML funcionarem
-    window.switchTab = switchTab;
-    window.openModal = openModal;
-    window.closeModal = closeModal;
-    window.handleImg = handleImg;
-    // ... outras funções chamadas via onclick no HTML
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentHz = tab.dataset.hz;
+        document.getElementById('horizonTitle').textContent = "Horizonte " + currentHz.replace('h','');
+        render();
+    };
 });
+
+document.getElementById('exportPngBtn').onclick = () => {
+    html2canvas(document.getElementById('board-container')).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'mapa-3h.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+};
+
+// --- INIT ---
+window.onload = loadAll;
+</script>
+</body>
+</html>
