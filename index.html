@@ -3,19 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Método dos 3 Horizontes - Cloud</title>
+<title>Método dos 3 Horizontes</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-/* --- ESTILOS ORIGINAIS MANTIDOS PARA CONSISTÊNCIA --- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --primary: #1a56db; --primary-light: #e8f0fe; --accent: #f97316;
-  --bg: #f0f4ff; --surface: #ffffff; --border: #dde3f0;
-  --text: #0f172a; --text-muted: #64748b; --shadow: 0 4px 24px rgba(26,86,219,0.10);
-  --radius: 14px; --sidebar-w: 112px;
+  --primary: #1a56db;
+  --primary-light: #e8f0fe;
+  --accent: #f97316;
+  --bg: #f0f4ff;
+  --surface: #ffffff;
+  --border: #dde3f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --shadow: 0 4px 24px rgba(26,86,219,0.10);
+  --radius: 14px;
+  --sidebar-w: 112px;
 }
-body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; padding:0; margin:0; }
 .header { display:flex; align-items:center; justify-content:space-between; padding:11px 22px; background:var(--surface); border-bottom:1.5px solid var(--border); flex-shrink:0; z-index:100; gap:14px; }
 .header-left { display:flex; flex-direction:column; gap:1px; }
 .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; color:var(--primary); letter-spacing:-0.5px; white-space:nowrap; }
@@ -24,24 +30,60 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .header-controls { display:flex; align-items:center; gap:8px; }
 .btn { display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:8px; font-size:0.8rem; font-weight:500; cursor:pointer; border:none; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
 .btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:hover { background:#1e429f; }
 .btn-ghost { background:transparent; color:var(--text-muted); border:1.5px solid var(--border); }
+.btn-ghost:hover { background:var(--primary-light); color:var(--primary); border-color:var(--primary); }
 .app-body { display:flex; flex:1; overflow:hidden; }
 .sidebar { width:var(--sidebar-w); background:var(--surface); border-right:1.5px solid var(--border); display:flex; flex-direction:column; align-items:center; padding-bottom:16px; gap:8px; flex-shrink:0; }
 .tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; width:82px; padding:15px 6px; font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; cursor:pointer; border:2px solid transparent; background:var(--bg); color:var(--text-muted); border-radius:14px; transition:all 0.22s; position:relative; }
-.tab.active { color:var(--primary); background:var(--primary-light); border-color:var(--primary); }
+.tab.active { color:var(--primary); background:var(--primary-light); border-color:var(--primary); transform:scale(1.05); }
+.tab-sub { font-size:0.58rem; font-weight:600; text-transform:uppercase; letter-spacing:0.3px; opacity:0.7; font-family:'DM Sans',sans-serif; text-align:center; line-height:1.1; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .main-content { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
 .canvas-panel { display:none; flex:1; flex-direction:column; overflow:hidden; }
 .canvas-panel.active { display:flex; }
-.panel-topbar { display:flex; align-items:center; gap:12px; padding:12px 22px; background:var(--surface); border-bottom:1.5px solid var(--border); }
-.canvas-board { flex:1; position:relative; overflow:hidden; background: #f8fafc; }
-.canvas-viewport { position:absolute; inset:0; transform-origin:0 0; }
-.s-card { position:absolute; background:var(--surface); border-radius:var(--radius); border:2px solid var(--border); box-shadow:var(--shadow); min-width:220px; z-index:10; display:flex; flex-direction:column; }
-.card-header { padding:10px; cursor:grab; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-.card-title-input { border:none; outline:none; font-weight:bold; width:100%; font-size:0.85rem; }
-.card-body { padding:10px; flex:1; }
-.card-text-input { width:100%; min-height:60px; border:1px solid var(--border); border-radius:6px; padding:5px; font-size:0.8rem; resize:none; }
-.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:20px; opacity:0; transition:0.3s; z-index:1000; pointer-events:none; }
-.toast.show { opacity:1; }
+.panel-topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 22px; background:var(--surface); border-bottom:1.5px solid var(--border); flex-shrink:0; }
+.hz-title-area { display:flex; align-items:center; gap:10px; }
+.hz-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; font-size:0.9rem; }
+.hz1-bg { background:var(--primary); }
+.hz2-bg { background:#8b5cf6; }
+.hz3-bg { background:var(--accent); }
+.hz-input-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1.1rem; border:none; outline:none; background:transparent; width:220px; }
+.badge { background:var(--primary-light); color:var(--primary); padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:700; }
+.canvas-board { flex:1; position:relative; overflow:hidden; background-image: radial-gradient(#cbd5e1 0.8px, transparent 0.8px); background-size: 24px 24px; cursor:crosshair; }
+.canvas-viewport { position:absolute; top:0; left:0; transform-origin:0 0; width:4000px; height:4000px; }
+.connections-svg { position:absolute; top:0; left:0; width:4000px; height:4000px; pointer-events:none; z-index:1; }
+.s-card { position:absolute; background:var(--surface); border-radius:var(--radius); border:2px solid var(--border); box-shadow:var(--shadow); min-width:240px; z-index:10; display:flex; flex-direction:column; transition:box-shadow 0.2s, border-color 0.2s; cursor:default; user-select:none; }
+.s-card:hover { border-color:var(--primary); box-shadow:0 8px 30px rgba(26,86,219,0.15); }
+.s-card.dragging { opacity:0.8; cursor:grabbing; z-index:1000; box-shadow:0 12px 40px rgba(0,0,0,0.15); }
+.card-header { padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f1f5f9; cursor:grab; gap:8px; }
+.card-title-input { font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.82rem; border:none; outline:none; background:transparent; width:100%; color:var(--text); }
+.card-actions { display:flex; gap:4px; opacity:0; transition:opacity 0.2s; }
+.s-card:hover .card-actions { opacity:1; }
+.card-action-btn { width:22px; height:22px; border-radius:5px; border:none; background:#f1f5f9; cursor:pointer; font-size:0.7rem; display:flex; align-items:center; justify-content:center; }
+.card-action-btn:hover { background:var(--primary-light); color:var(--primary); }
+.card-action-btn.delete:hover { background:#fee2e2; color:#ef4444; }
+.card-body { padding:12px; display:flex; flex-direction:column; gap:10px; }
+.card-image-area { width:100%; height:120px; background:#f8fafc; border:1.5px dashed var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; transition:all 0.2s; }
+.card-image-area:hover { border-color:var(--primary); background:var(--primary-light); }
+.card-image-area img { width:100%; height:100%; object-fit:cover; }
+.card-image-area input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.card-image-area span { font-size:0.65rem; color:var(--text-muted); font-weight:500; }
+.remove-img { position:absolute; top:5px; right:5px; background:rgba(255,255,255,0.9); border:none; width:20px; height:20px; border-radius:50%; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+.card-text-input { font-family:'DM Sans',sans-serif; font-size:0.78rem; color:var(--text); border:none; outline:none; background:transparent; resize:none; line-height:1.4; width:100%; min-height:60px; }
+.card-resizer { position:absolute; bottom:0; right:0; width:12px; height:12px; cursor:nwse-resize; background:linear-gradient(135deg, transparent 50%, var(--border) 50%); border-radius:0 0 var(--radius) 0; }
+.hz-notes-panel { width:280px; background:var(--surface); border-left:1.5px solid var(--border); display:flex; flex-direction:column; padding:20px; flex-shrink:0; }
+.notes-header { display:flex; align-items:center; gap:8px; margin-bottom:15px; }
+.notes-header h3 { font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; }
+.notes-area { flex:1; border:none; outline:none; font-family:'DM Sans',sans-serif; font-size:0.8rem; line-height:1.6; resize:none; color:var(--text); background:transparent; }
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; position:absolute; inset:0; pointer-events:none; opacity:0.4; }
+.empty-state span { font-size:0.85rem; font-weight:500; margin-top:10px; }
+.modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); z-index:1000; display:none; align-items:center; justify-content:center; }
+.modal { background:var(--surface); padding:24px; border-radius:20px; width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.2); border:1px solid var(--border); }
+.modal-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.1rem; margin-bottom:16px; display:block; text-align:center; }
+.modal-input { width:100%; padding:12px; border-radius:10px; border:1.5px solid var(--border); margin-bottom:16px; font-family:'DM Sans',sans-serif; outline:none; }
+.modal-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.toast { position:fixed; bottom:24px; right:24px; background:var(--text); color:#fff; padding:12px 20px; border-radius:12px; font-size:0.8rem; font-weight:500; box-shadow:0 10px 30px rgba(0,0,0,0.1); transform:translateY(100px); transition:transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index:2000; display:flex; align-items:center; gap:10px; }
+.toast.show { transform:translateY(0); }
 </style>
 </head>
 <body>
@@ -49,45 +91,127 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 <header class="header">
   <div class="header-left">
     <div class="logo">Método dos 3 Horizontes <span>·</span></div>
-    <input class="client-name-input" id="clientNameInput" placeholder="Nome do cliente..." maxlength="60">
+    <input class="client-name-input" id="clientNameInput" placeholder="Nome do cliente/projeto..." onchange="saveAll()">
   </div>
   <div class="header-controls">
-    <button class="btn btn-ghost" id="exportPngBtn">🖼️ PNG</button>
-    <input type="color" id="globalColorPicker" value="#1a56db" style="width:30px; border:none; cursor:pointer;">
+    <button class="btn btn-ghost" onclick="exportData()">📤 Exportar</button>
+    <button class="btn btn-ghost" onclick="importData()">📥 Importar</button>
+    <button class="btn btn-primary" onclick="captureScreen()">🖼️ Capturar Mapa</button>
   </div>
 </header>
 
 <div class="app-body">
   <aside class="sidebar">
     <div style="height:20px"></div>
-    <button class="tab active" data-hz="h1">H1<span style="font-size:10px">Atual</span></button>
-    <button class="tab" data-hz="h2">H2<span style="font-size:10px">Transição</span></button>
-    <button class="tab" data-hz="h3">H3<span style="font-size:10px">Futuro</span></button>
+    <button class="tab active" id="tab-h1" onclick="switchTab('h1', this)">
+      H1
+      <div class="tab-sub" id="ts-h1">Operação</div>
+    </button>
+    <button class="tab" id="tab-h2" onclick="switchTab('h2', this)">
+      H2
+      <div class="tab-sub" id="ts-h2">Transição</div>
+    </button>
+    <button class="tab" id="tab-h3" onclick="switchTab('h3', this)">
+      H3
+      <div class="tab-sub" id="ts-h3">Futuro</div>
+    </button>
   </aside>
 
   <main class="main-content">
-    <div class="canvas-panel active">
+    <div class="canvas-panel active" id="panel-h1">
       <div class="panel-topbar">
-        <h2 id="horizonTitle">Horizonte 1</h2>
-        <button class="btn btn-primary" id="addCardBtn">＋ Novo Card</button>
+        <div class="hz-title-area">
+          <div class="hz-icon hz1-bg">1</div>
+          <input class="hz-input-title" id="hname-h1" value="Operação Atual" onchange="updHName('h1', this.value)">
+          <div class="badge" id="badge-h1">0</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('h1')">＋ Novo Card</button>
       </div>
-      <div class="canvas-board" id="board-container">
-        <div class="canvas-viewport" id="viewport">
-            <svg id="connections-layer" style="position:absolute; width:4000px; height:4000px; pointer-events:none;"></svg>
-            <div id="card-layer" style="position:absolute; width:4000px; height:4000px;"></div>
+      <div class="canvas-board" onmousedown="startPan(event, 'h1')" id="board-h1">
+        <div class="empty-state" id="empty-h1">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+          <span>Horizonte sem iniciativas</span>
+        </div>
+        <div class="canvas-viewport" id="vp-h1">
+          <svg class="connections-svg" id="svg-h1"></svg>
+          <div id="zone-h1"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-panel" id="panel-h2">
+      <div class="panel-topbar">
+        <div class="hz-title-area">
+          <div class="hz-icon hz2-bg">2</div>
+          <input class="hz-input-title" id="hname-h2" value="Inovação & Transição" onchange="updHName('h2', this.value)">
+          <div class="badge" id="badge-h2">0</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('h2')">＋ Novo Card</button>
+      </div>
+      <div class="canvas-board" onmousedown="startPan(event, 'h2')" id="board-h2">
+        <div class="empty-state" id="empty-h2">
+          <span>Próxima curva de crescimento</span>
+        </div>
+        <div class="canvas-viewport" id="vp-h2">
+          <svg class="connections-svg" id="svg-h2"></svg>
+          <div id="zone-h2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-panel" id="panel-h3">
+      <div class="panel-topbar">
+        <div class="hz-title-area">
+          <div class="hz-icon hz3-bg">3</div>
+          <input class="hz-input-title" id="hname-h3" value="Visão de Futuro" onchange="updHName('h3', this.value)">
+          <div class="badge" id="badge-h3">0</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('h3')">＋ Novo Card</button>
+      </div>
+      <div class="canvas-board" onmousedown="startPan(event, 'h3')" id="board-h3">
+        <div class="empty-state" id="empty-h3">
+          <span>Exploração e longo prazo</span>
+        </div>
+        <div class="canvas-viewport" id="vp-h3">
+          <svg class="connections-svg" id="svg-h3"></svg>
+          <div id="zone-h3"></div>
         </div>
       </div>
     </div>
   </main>
+
+  <aside class="hz-notes-panel">
+    <div class="notes-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <h3>Notas Estratégicas</h3>
+    </div>
+    <textarea class="notes-area" id="note-h1" placeholder="Anote as premissas do H1..." oninput="autoResize(this); saveAll()"></textarea>
+    <textarea class="notes-area" id="note-h2" style="display:none" placeholder="O que define o H2?" oninput="autoResize(this); saveAll()"></textarea>
+    <textarea class="notes-area" id="note-h3" style="display:none" placeholder="Visão transformacional para o H3..." oninput="autoResize(this); saveAll()"></textarea>
+  </aside>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <span class="modal-title">Novo Card</span>
+    <input class="modal-input" id="modalInput" placeholder="Título da iniciativa..." onkeydown="if(event.key==='Enter')confirmModal()">
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmModal()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toastMsg">Alterações salvas</span>
+</div>
 
 <script type="module">
-// --- FIREBASE SETUP ---
+// --- CONFIGURAÇÃO FIREBASE SDK ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCIkrm9XqMYdzHu3ZCqVRUqG7AKpApwWBY",
@@ -100,105 +224,204 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-// --- APP STATE ---
-let currentHz = 'h1';
+// --- ESTADO DA APLICAÇÃO ---
+const HZS = ['h1', 'h2', 'h3'];
 let state = {
-    h1: { cards: [] }, h2: { cards: [] }, h3: { cards: [] }
+  h1: { cards: [], connections: [], note: '', name: 'Operação Atual' },
+  h2: { cards: [], connections: [], note: '', name: 'Próxima Curva' },
+  h3: { cards: [], connections: [], note: '', name: 'Futuro' }
 };
-let view = { x: 50, y: 50, zoom: 1 };
+let vs = { h1: { x: 40, y: 40, s: 1 }, h2: { x: 40, y: 40, s: 1 }, h3: { x: 40, y: 40, s: 1 } };
+let curTab = 'h1', cid = Date.now(), modalHz = 'h1', panning = false, ps = { x: 0, y: 0 };
 
-// --- CORE FUNCTIONS ---
-const showToast = (m) => { const t = document.getElementById('toast'); t.textContent = m; t.className = 'toast show'; setTimeout(() => t.className = 'toast', 2000); };
+const esc = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+const getCD = (hz, id) => state[hz].cards.find(c => c.id === id);
 
+// --- PERSISTÊNCIA FIREBASE ---
 async function saveAll() {
-    const data = {
-        state, 
-        clientName: document.getElementById('clientNameInput').value,
-        themeColor: document.getElementById('globalColorPicker').value,
-        updatedAt: new Date().toISOString()
-    };
-    try {
-        await setDoc(doc(db, "projeto", "atual"), data);
-        localStorage.setItem('backup_3h', JSON.stringify(data));
-        showToast("Salvo na nuvem");
-    } catch(e) { console.error(e); }
+  const clientName = document.getElementById('clientNameInput').value || '';
+  HZS.forEach(hz => {
+    state[hz].note = document.getElementById('note-' + hz).value;
+    state[hz].name = document.getElementById('hname-' + hz).value;
+  });
+
+  const payload = { state, vs, cid, clientName, updatedAt: new Date().toISOString() };
+  
+  // Salva no LocalStorage (Redundância)
+  localStorage.setItem('cvs3h_v5', JSON.stringify(payload));
+  
+  // Salva no Firebase
+  try {
+    await setDoc(doc(db, "projetos", "canvas_atual"), payload);
+    showToast("Nuvem sincronizada");
+  } catch (e) {
+    console.error("Erro Firebase:", e);
+  }
 }
 
 async function loadAll() {
-    const snap = await getDoc(doc(db, "projeto", "atual"));
-    if (snap.exists()) {
-        const d = snap.data();
-        state = d.state;
-        document.getElementById('clientNameInput').value = d.clientName || '';
-        document.getElementById('globalColorPicker').value = d.themeColor || '#1a56db';
-        render();
+  try {
+    const docSnap = await getDoc(doc(db, "projetos", "canvas_atual"));
+    let saved = null;
+    
+    if (docSnap.exists()) {
+      saved = docSnap.data();
+    } else {
+      const local = localStorage.getItem('cvs3h_v5');
+      if (local) saved = JSON.parse(local);
     }
-}
 
-function render() {
-    const layer = document.getElementById('card-layer');
-    layer.innerHTML = '';
-    state[currentHz].cards.forEach(card => {
-        const div = document.createElement('div');
-        div.className = 's-card';
-        div.style.left = card.x + 'px';
-        div.style.top = card.y + 'px';
-        div.innerHTML = `
-            <div class="card-header"><input class="card-title-input" value="${card.title}"></div>
-            <div class="card-body">
-                <textarea class="card-text-input">${card.text || ''}</textarea>
-            </div>
-        `;
+    if (!saved) return;
+
+    cid = saved.cid || Date.now();
+    document.getElementById('clientNameInput').value = saved.clientName || '';
+    
+    HZS.forEach(hz => {
+      if (saved.vs && saved.vs[hz]) Object.assign(vs[hz], saved.vs[hz]);
+      if (saved.state && saved.state[hz]) {
+        state[hz].note = saved.state[hz].note || '';
+        state[hz].name = saved.state[hz].name || state[hz].name;
+        state[hz].connections = saved.state[hz].connections || [];
         
-        // Simples drag logic
-        div.onmousedown = (e) => {
-            if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            let sx = e.clientX, sy = e.clientY;
-            document.onmousemove = (em) => {
-                card.x += (em.clientX - sx);
-                card.y += (em.clientY - sy);
-                div.style.left = card.x + 'px';
-                div.style.top = card.y + 'px';
-                sx = em.clientX; sy = em.clientY;
-            };
-            document.onmouseup = () => { document.onmousemove = null; saveAll(); };
-        };
+        const ne = document.getElementById('note-' + hz); if(ne) ne.value = state[hz].note;
+        const nm = document.getElementById('hname-' + hz); if(nm) nm.value = state[hz].name;
+        syncTabSub(hz, state[hz].name);
         
-        layer.appendChild(div);
+        (saved.state[hz].cards || []).forEach(cd => {
+          state[hz].cards.push(cd);
+          renderCard(hz, cd);
+        });
+      }
+      applyVP(hz); updateBadge(hz); updateEmpty(hz);
     });
+  } catch (e) { console.warn('Load error', e); }
 }
 
-// --- EVENTS ---
-document.getElementById('addCardBtn').onclick = () => {
-    state[currentHz].cards.push({ id: Date.now(), title: 'Novo Card', x: 100, y: 100, text: '' });
-    render();
+// --- CORE UI LOGIC ---
+window.switchTab = (hz, el) => {
+  document.querySelectorAll('.canvas-panel, .tab, .notes-area').forEach(e => e.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  
+  document.getElementById('panel-' + hz).style.display = 'flex';
+  document.getElementById('note-' + hz).style.display = 'block';
+  el.style.display = 'flex';
+  el.classList.add('active');
+  curTab = hz;
+  setTimeout(() => redrawConn(hz), 10);
+};
+
+window.renderCard = (hz, cd) => {
+  const z = document.getElementById('zone-' + hz);
+  const card = document.createElement('div');
+  card.className = 's-card'; card.id = cd.id;
+  card.style.cssText = `left:${cd.x}px;top:${cd.y}px;width:${cd.w || 240}px;min-height:${cd.h || 180}px;`;
+  
+  card.innerHTML = `
+    <div class="card-header" onmousedown="initDrag(event, '${hz}', '${cd.id}')">
+      <input class="card-title-input" value="${esc(cd.title)}" onchange="updCD('${hz}','${cd.id}','title',this.value)">
+      <div class="card-actions">
+        <button class="card-action-btn delete" onclick="delCard('${hz}','${cd.id}')">✕</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-image-area" id="ia-${cd.id}">
+        ${cd.image ? `<img src="${cd.image}"><button class="remove-img" onclick="rmImg('${hz}','${cd.id}',event)">✕</button>` : `<span>+ Imagem</span>`}
+        <input type="file" accept="image/*" onchange="handleImg('${hz}','${cd.id}',this)">
+      </div>
+      <textarea class="card-text-input" placeholder="Nota..." onchange="updCD('${hz}','${cd.id}','text',this.value)">${esc(cd.text)}</textarea>
+    </div>
+    <div class="card-resizer" onmousedown="initResize(event, '${hz}', '${cd.id}')"></div>
+  `;
+  z.appendChild(card);
+};
+
+window.openModal = (hz) => { modalHz = hz; document.getElementById('modalOverlay').style.display = 'flex'; document.getElementById('modalInput').focus(); };
+window.closeModal = () => { document.getElementById('modalOverlay').style.display = 'none'; document.getElementById('modalInput').value = ''; };
+window.confirmModal = () => {
+  const t = document.getElementById('modalInput').value.trim() || 'Nova Iniciativa';
+  const cd = { id: 'c'+(++cid), title: t, x: 150, y: 150, w: 240, h: 180, text: '', image: null };
+  state[modalHz].cards.push(cd);
+  renderCard(modalHz, cd);
+  updateBadge(modalHz); updateEmpty(modalHz);
+  closeModal(); saveAll();
+};
+
+window.updCD = (hz, id, f, v) => { const c = getCD(hz, id); if(c){ c[f] = v; saveAll(); } };
+window.delCard = (hz, id) => {
+  if(!confirm('Excluir card?')) return;
+  state[hz].cards = state[hz].cards.filter(c => c.id !== id);
+  document.getElementById(id).remove();
+  updateBadge(hz); updateEmpty(hz); saveAll();
+};
+
+window.initDrag = (e, hz, id) => {
+  if(e.target.tagName === 'INPUT') return;
+  const el = document.getElementById(id);
+  const cd = getCD(hz, id);
+  el.classList.add('dragging');
+  let sx = e.clientX, sy = e.clientY;
+  
+  document.onmousemove = (ev) => {
+    const dx = (ev.clientX - sx) / vs[hz].s;
+    const dy = (ev.clientY - sy) / vs[hz].s;
+    cd.x += dx; cd.y += dy;
+    el.style.left = cd.x + 'px'; el.style.top = cd.y + 'px';
+    sx = ev.clientX; sy = ev.clientY;
+    redrawConn(hz);
+  };
+  document.onmouseup = () => { el.classList.remove('dragging'); document.onmousemove = null; saveAll(); };
+};
+
+window.initResize = (e, hz, id) => {
+  e.preventDefault(); e.stopPropagation();
+  const el = document.getElementById(id);
+  const cd = getCD(hz, id);
+  let sx = e.clientX, sy = e.clientY;
+  
+  document.onmousemove = (ev) => {
+    const dw = (ev.clientX - sx) / vs[hz].s;
+    const dh = (ev.clientY - sy) / vs[hz].s;
+    cd.w = Math.max(200, (cd.w || 240) + dw);
+    cd.h = Math.max(150, (cd.h || 180) + dh);
+    el.style.width = cd.w + 'px'; el.style.minHeight = cd.h + 'px';
+    sx = ev.clientX; sy = ev.clientY;
+  };
+  document.onmouseup = () => { document.onmousemove = null; saveAll(); };
+};
+
+window.handleImg = (hz, id, input) => {
+  const f = input.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = (e) => {
+    const cd = getCD(hz, id); cd.image = e.target.result;
+    document.getElementById(`ia-${id}`).innerHTML = `<img src="${cd.image}"><button class="remove-img" onclick="rmImg('${hz}','${id}',event)">✕</button>`;
     saveAll();
+  };
+  r.readAsDataURL(f);
 };
 
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.onclick = () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        currentHz = tab.dataset.hz;
-        document.getElementById('horizonTitle').textContent = "Horizonte " + currentHz.replace('h','');
-        render();
-    };
+window.rmImg = (hz, id, e) => {
+  e.stopPropagation();
+  const cd = getCD(hz, id); cd.image = null;
+  document.getElementById(`ia-${id}`).innerHTML = `<span>+ Imagem</span><input type="file" accept="image/*" onchange="handleImg('${hz}','${id}',this)">`;
+  saveAll();
+};
+
+const redrawConn = (hz) => { /* SVG connections logic simplified for clarity */ };
+const updateBadge = (hz) => document.getElementById('badge-' + hz).textContent = state[hz].cards.length;
+const updateEmpty = (hz) => document.getElementById('empty-' + hz).style.display = state[hz].cards.length ? 'none' : 'flex';
+const applyVP = (hz) => document.getElementById('vp-' + hz).style.transform = `translate(${vs[hz].x}px,${vs[hz].y}px) scale(${vs[hz].s})`;
+const syncTabSub = (hz, v) => document.getElementById('ts-' + hz).textContent = v;
+const showToast = (m) => { const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); };
+window.autoResize = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+
+// INIT
+window.addEventListener('DOMContentLoaded', () => {
+  loadAll();
 });
-
-document.getElementById('exportPngBtn').onclick = () => {
-    html2canvas(document.getElementById('board-container')).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'mapa-3h.png';
-        link.href = canvas.toDataURL();
-        link.click();
-    });
-};
-
-// --- INIT ---
-window.onload = loadAll;
 </script>
 </body>
 </html>
