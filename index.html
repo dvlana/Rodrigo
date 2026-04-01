@@ -208,7 +208,7 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 </div>
 
 <script type="module">
-// --- CONFIGURAÇÃO FIREBASE SDK ---
+// --- SDK FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -227,100 +227,75 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
-// --- ESTADO DA APLICAÇÃO ---
-const HZS = ['h1', 'h2', 'h3'];
-let state = {
-  h1: { cards: [], connections: [], note: '', name: 'Operação Atual' },
-  h2: { cards: [], connections: [], note: '', name: 'Próxima Curva' },
-  h3: { cards: [], connections: [], note: '', name: 'Futuro' }
-};
-let vs = { h1: { x: 40, y: 40, s: 1 }, h2: { x: 40, y: 40, s: 1 }, h3: { x: 40, y: 40, s: 1 } };
-let curTab = 'h1', cid = Date.now(), modalHz = 'h1', panning = false, ps = { x: 0, y: 0 };
+// --- LÓGICA ORIGINAL DO APLICATIVO ---
+const HZS=['h1','h2','h3'];
+let state={h1:{cards:[],connections:[],note:'',name:'Operação Atual'},h2:{cards:[],connections:[],note:'',name:'Próxima Curva'},h3:{cards:[],connections:[],note:'',name:'Futuro'}};
+let vs={h1:{x:40,y:40,s:1},h2:{x:40,y:40,s:1},h3:{x:40,y:40,s:1}};
+let curTab='h1',cid=Date.now(),modalHz='h1',panning=false,ps={x:0,y:0};
 
-const esc = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
-const getCD = (hz, id) => state[hz].cards.find(c => c.id === id);
+const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
+const getCD=(hz,id)=>state[hz].cards.find(c=>c.id===id);
 
-// --- PERSISTÊNCIA FIREBASE ---
-async function saveAll() {
-  const clientName = document.getElementById('clientNameInput').value || '';
-  HZS.forEach(hz => {
-    state[hz].note = document.getElementById('note-' + hz).value;
-    state[hz].name = document.getElementById('hname-' + hz).value;
+async function saveAll(){
+  HZS.forEach(hz=>{
+    state[hz].note=document.getElementById('note-'+hz).value;
+    state[hz].name=document.getElementById('hname-'+hz).value;
   });
-
-  const payload = { state, vs, cid, clientName, updatedAt: new Date().toISOString() };
+  const data={state,vs,cid,clientName:document.getElementById('clientNameInput').value};
+  localStorage.setItem('cvs3h_v5',JSON.stringify(data));
   
-  // Salva no LocalStorage (Redundância)
-  localStorage.setItem('cvs3h_v5', JSON.stringify(payload));
-  
-  // Salva no Firebase
+  // Sincronização Cloud opcional via SDK
   try {
-    await setDoc(doc(db, "projetos", "canvas_atual"), payload);
-    showToast("Nuvem sincronizada");
-  } catch (e) {
-    console.error("Erro Firebase:", e);
-  }
+    await setDoc(doc(db, "projetos", "atual"), data);
+    showToast('Sincronizado na Nuvem');
+  } catch(e) { console.error("Cloud save error", e); }
 }
 
-async function loadAll() {
-  try {
-    const docSnap = await getDoc(doc(db, "projetos", "canvas_atual"));
-    let saved = null;
+async function loadAll(){
+  try{
+    const docSnap = await getDoc(doc(db, "projetos", "atual"));
+    let saved = docSnap.exists() ? docSnap.data() : JSON.parse(localStorage.getItem('cvs3h_v5'));
     
-    if (docSnap.exists()) {
-      saved = docSnap.data();
-    } else {
-      const local = localStorage.getItem('cvs3h_v5');
-      if (local) saved = JSON.parse(local);
+    if(!saved)return;
+    cid=saved.cid||Date.now();
+    document.getElementById('clientNameInput').value=saved.clientName||'';
+    HZS.forEach(hz=>{if(saved.vs&&saved.vs[hz])Object.assign(vs[hz],saved.vs[hz]);});
+    if(saved.state){
+      HZS.forEach(hz=>{
+        if(!saved.state[hz])return;
+        Object.assign(state[hz],{note:saved.state[hz].note||'',name:saved.state[hz].name||state[hz].name,connections:saved.state[hz].connections||[]});
+        const ne=document.getElementById('note-'+hz);if(ne){ne.value=state[hz].note;autoResize(ne);}
+        const nm=document.getElementById('hname-'+hz);if(nm){nm.value=state[hz].name;syncTabSub(hz,state[hz].name);}
+        (saved.state[hz].cards||[]).forEach(cd=>{state[hz].cards.push(cd);renderCard(hz,cd);});
+        updateBadge(hz);updateEmpty(hz);
+      });
     }
-
-    if (!saved) return;
-
-    cid = saved.cid || Date.now();
-    document.getElementById('clientNameInput').value = saved.clientName || '';
-    
-    HZS.forEach(hz => {
-      if (saved.vs && saved.vs[hz]) Object.assign(vs[hz], saved.vs[hz]);
-      if (saved.state && saved.state[hz]) {
-        state[hz].note = saved.state[hz].note || '';
-        state[hz].name = saved.state[hz].name || state[hz].name;
-        state[hz].connections = saved.state[hz].connections || [];
-        
-        const ne = document.getElementById('note-' + hz); if(ne) ne.value = state[hz].note;
-        const nm = document.getElementById('hname-' + hz); if(nm) nm.value = state[hz].name;
-        syncTabSub(hz, state[hz].name);
-        
-        (saved.state[hz].cards || []).forEach(cd => {
-          state[hz].cards.push(cd);
-          renderCard(hz, cd);
-        });
-      }
-      applyVP(hz); updateBadge(hz); updateEmpty(hz);
-    });
-  } catch (e) { console.warn('Load error', e); }
+    HZS.forEach(hz=>{applyVP(hz);setTimeout(()=>redrawConn(hz),100);});
+  }catch(e){console.warn('Load error',e);}
 }
 
-// --- CORE UI LOGIC ---
-window.switchTab = (hz, el) => {
-  document.querySelectorAll('.canvas-panel, .tab, .notes-area').forEach(e => e.style.display = 'none');
-  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
-  
-  document.getElementById('panel-' + hz).style.display = 'flex';
-  document.getElementById('note-' + hz).style.display = 'block';
-  el.style.display = 'flex';
+// Expondo funções para o HTML (Necessário devido ao type="module")
+window.switchTab=(hz,el)=>{
+  HZS.forEach(h=>{
+    document.getElementById('panel-'+h).classList.remove('active');
+    document.getElementById('tab-'+h).classList.remove('active');
+    document.getElementById('note-'+h).style.display='none';
+  });
+  document.getElementById('panel-'+hz).classList.add('active');
   el.classList.add('active');
-  curTab = hz;
-  setTimeout(() => redrawConn(hz), 10);
+  document.getElementById('note-'+hz).style.display='block';
+  curTab=hz;
+  autoResize(document.getElementById('note-'+hz));
+  setTimeout(()=>redrawConn(hz),10);
 };
 
-window.renderCard = (hz, cd) => {
-  const z = document.getElementById('zone-' + hz);
-  const card = document.createElement('div');
-  card.className = 's-card'; card.id = cd.id;
-  card.style.cssText = `left:${cd.x}px;top:${cd.y}px;width:${cd.w || 240}px;min-height:${cd.h || 180}px;`;
-  
-  card.innerHTML = `
-    <div class="card-header" onmousedown="initDrag(event, '${hz}', '${cd.id}')">
+window.renderCard=(hz,cd)=>{
+  const z=document.getElementById('zone-'+hz);
+  const card=document.createElement('div');
+  card.className='s-card';card.id=cd.id;
+  card.style.cssText=`left:${cd.x}px;top:${cd.y}px;width:${cd.w||240}px;min-height:${cd.h||180}px;`;
+  card.innerHTML=`
+    <div class="card-header" onmousedown="initDrag(event,'${hz}','${cd.id}')">
       <input class="card-title-input" value="${esc(cd.title)}" onchange="updCD('${hz}','${cd.id}','title',this.value)">
       <div class="card-actions">
         <button class="card-action-btn delete" onclick="delCard('${hz}','${cd.id}')">✕</button>
@@ -328,100 +303,101 @@ window.renderCard = (hz, cd) => {
     </div>
     <div class="card-body">
       <div class="card-image-area" id="ia-${cd.id}">
-        ${cd.image ? `<img src="${cd.image}"><button class="remove-img" onclick="rmImg('${hz}','${cd.id}',event)">✕</button>` : `<span>+ Imagem</span>`}
+        ${cd.image?`<img src="${cd.image}"><button class="remove-img" onclick="rmImg('${hz}','${cd.id}',event)">✕</button>`:`<span>+ Imagem</span>`}
         <input type="file" accept="image/*" onchange="handleImg('${hz}','${cd.id}',this)">
       </div>
-      <textarea class="card-text-input" placeholder="Nota..." onchange="updCD('${hz}','${cd.id}','text',this.value)">${esc(cd.text)}</textarea>
+      <textarea class="card-text-input" placeholder="Nota..." oninput="updCD('${hz}','${cd.id}','text',this.value)">${esc(cd.text||'')}</textarea>
     </div>
-    <div class="card-resizer" onmousedown="initResize(event, '${hz}', '${cd.id}')"></div>
-  `;
+    <div class="card-resizer" onmousedown="initResize(event,'${hz}','${cd.id}')"></div>`;
   z.appendChild(card);
 };
 
-window.openModal = (hz) => { modalHz = hz; document.getElementById('modalOverlay').style.display = 'flex'; document.getElementById('modalInput').focus(); };
-window.closeModal = () => { document.getElementById('modalOverlay').style.display = 'none'; document.getElementById('modalInput').value = ''; };
-window.confirmModal = () => {
-  const t = document.getElementById('modalInput').value.trim() || 'Nova Iniciativa';
-  const cd = { id: 'c'+(++cid), title: t, x: 150, y: 150, w: 240, h: 180, text: '', image: null };
-  state[modalHz].cards.push(cd);
-  renderCard(modalHz, cd);
-  updateBadge(modalHz); updateEmpty(modalHz);
-  closeModal(); saveAll();
+window.openModal=hz=>{modalHz=hz;document.getElementById('modalOverlay').style.display='flex';document.getElementById('modalInput').focus();};
+window.closeModal=()=>{document.getElementById('modalOverlay').style.display='none';document.getElementById('modalInput').value='';};
+window.confirmModal=()=>{
+  const t=document.getElementById('modalInput').value.trim()||'Nova Iniciativa';
+  const cd={id:'c'+(++cid),title:t,x:150,y:150,w:240,h:180,text:'',image:null};
+  state[modalHz].cards.push(cd);renderCard(modalHz,cd);
+  updateBadge(modalHz);updateEmpty(modalHz);closeModal();saveAll();
 };
 
-window.updCD = (hz, id, f, v) => { const c = getCD(hz, id); if(c){ c[f] = v; saveAll(); } };
-window.delCard = (hz, id) => {
-  if(!confirm('Excluir card?')) return;
-  state[hz].cards = state[hz].cards.filter(c => c.id !== id);
-  document.getElementById(id).remove();
-  updateBadge(hz); updateEmpty(hz); saveAll();
-};
+window.updCD=(hz,id,f,v)=>{const c=getCD(hz,id);if(c){c[f]=v;saveAll();}};
+window.updHName=(hz,v)=>{state[hz].name=v;syncTabSub(hz,v);saveAll();};
+window.delCard=(hz,id)=>{if(confirm('Excluir card?')){state[hz].cards=state[hz].cards.filter(c=>c.id!==id);document.getElementById(id).remove();updateBadge(hz);updateEmpty(hz);saveAll();}};
 
-window.initDrag = (e, hz, id) => {
-  if(e.target.tagName === 'INPUT') return;
-  const el = document.getElementById(id);
-  const cd = getCD(hz, id);
-  el.classList.add('dragging');
-  let sx = e.clientX, sy = e.clientY;
-  
-  document.onmousemove = (ev) => {
-    const dx = (ev.clientX - sx) / vs[hz].s;
-    const dy = (ev.clientY - sy) / vs[hz].s;
-    cd.x += dx; cd.y += dy;
-    el.style.left = cd.x + 'px'; el.style.top = cd.y + 'px';
-    sx = ev.clientX; sy = ev.clientY;
-    redrawConn(hz);
+window.initDrag=(e,hz,id)=>{
+  if(e.target.tagName==='INPUT')return;
+  const el=document.getElementById(id);const cd=getCD(hz,id);
+  el.classList.add('dragging');let sx=e.clientX,sy=e.clientY;
+  const mm=ev=>{
+    const dx=(ev.clientX-sx)/vs[hz].s,dy=(ev.clientY-sy)/vs[hz].s;
+    cd.x+=dx;cd.y+=dy;el.style.left=cd.x+'px';el.style.top=cd.y+'px';
+    sx=ev.clientX;sy=ev.clientY;redrawConn(hz);
   };
-  document.onmouseup = () => { el.classList.remove('dragging'); document.onmousemove = null; saveAll(); };
+  const mu=()=>{el.classList.remove('dragging');document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);saveAll();};
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
 };
 
-window.initResize = (e, hz, id) => {
-  e.preventDefault(); e.stopPropagation();
-  const el = document.getElementById(id);
-  const cd = getCD(hz, id);
-  let sx = e.clientX, sy = e.clientY;
-  
-  document.onmousemove = (ev) => {
-    const dw = (ev.clientX - sx) / vs[hz].s;
-    const dh = (ev.clientY - sy) / vs[hz].s;
-    cd.w = Math.max(200, (cd.w || 240) + dw);
-    cd.h = Math.max(150, (cd.h || 180) + dh);
-    el.style.width = cd.w + 'px'; el.style.minHeight = cd.h + 'px';
-    sx = ev.clientX; sy = ev.clientY;
+window.initResize=(e,hz,id)=>{
+  e.preventDefault();e.stopPropagation();
+  const el=document.getElementById(id);const cd=getCD(hz,id);
+  let sx=e.clientX,sy=e.clientY;
+  const mm=ev=>{
+    const dw=(ev.clientX-sx)/vs[hz].s,dh=(ev.clientY-sy)/vs[hz].s;
+    cd.w=(cd.w||240)+dw;cd.h=(cd.h||180)+dh;
+    el.style.width=cd.w+'px';el.style.minHeight=cd.h+'px';
+    sx=ev.clientX;sy=ev.clientY;
   };
-  document.onmouseup = () => { document.onmousemove = null; saveAll(); };
+  const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);saveAll();};
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
 };
 
-window.handleImg = (hz, id, input) => {
-  const f = input.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = (e) => {
-    const cd = getCD(hz, id); cd.image = e.target.result;
-    document.getElementById(`ia-${id}`).innerHTML = `<img src="${cd.image}"><button class="remove-img" onclick="rmImg('${hz}','${id}',event)">✕</button>`;
+window.handleImg=(hz,id,input)=>{
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();r.onload=e=>{
+    const cd=getCD(hz,id);cd.image=e.target.result;
+    document.getElementById(`ia-${id}`).innerHTML=`<img src="${cd.image}"><button class="remove-img" onclick="rmImg('${hz}','${id}',event)">✕</button>`;
     saveAll();
-  };
-  r.readAsDataURL(f);
+  };r.readAsDataURL(f);
 };
 
-window.rmImg = (hz, id, e) => {
-  e.stopPropagation();
-  const cd = getCD(hz, id); cd.image = null;
-  document.getElementById(`ia-${id}`).innerHTML = `<span>+ Imagem</span><input type="file" accept="image/*" onchange="handleImg('${hz}','${id}',this)">`;
+window.rmImg=(hz,id,e)=>{
+  e.stopPropagation();const cd=getCD(hz,id);cd.image=null;
+  document.getElementById(`ia-${id}`).innerHTML=`<span>+ Imagem</span><input type="file" accept="image/*" onchange="handleImg('${hz}','${id}',this)">`;
   saveAll();
 };
 
-const redrawConn = (hz) => { /* SVG connections logic simplified for clarity */ };
-const updateBadge = (hz) => document.getElementById('badge-' + hz).textContent = state[hz].cards.length;
-const updateEmpty = (hz) => document.getElementById('empty-' + hz).style.display = state[hz].cards.length ? 'none' : 'flex';
-const applyVP = (hz) => document.getElementById('vp-' + hz).style.transform = `translate(${vs[hz].x}px,${vs[hz].y}px) scale(${vs[hz].s})`;
-const syncTabSub = (hz, v) => document.getElementById('ts-' + hz).textContent = v;
-const showToast = (m) => { const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); };
-window.autoResize = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+window.startPan=(e,hz)=>{
+  if(e.target.classList.contains('canvas-board')){
+    panning=true;ps={x:e.clientX-vs[hz].x,y:e.clientY-vs[hz].y};
+    const mm=ev=>{if(!panning)return;vs[hz].x=ev.clientX-ps.x;vs[hz].y=ev.clientY-ps.y;applyVP(hz);};
+    const mu=()=>{panning=false;document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);saveAll();};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  }
+};
+
+window.captureScreen=async()=>{
+  const btn=document.querySelector('.btn-primary');btn.style.display='none';
+  const board=document.getElementById('panel-'+curTab);
+  const canvas=await html2canvas(board,{backgroundColor:'#f0f4ff',scale:2});
+  const link=document.createElement('a');link.download=`mapa-3h-${curTab}.png`;
+  link.href=canvas.toDataURL();link.click();btn.style.display='inline-flex';
+};
+
+window.exportData=()=>{saveAll();const d=localStorage.getItem('cvs3h_v5');if(!d)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'application/json'}));a.download=`3h-${Date.now()}.json`;a.click();showToast('JSON exportado!');};
+window.importData=()=>{const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{localStorage.setItem('cvs3h_v5',ev.target.result);location.reload();}catch(e){showToast('Erro ao importar');}};r.readAsText(f);};i.click();};
+
+function redrawConn(hz){/* Lógica de conexão mantida simplificada */}
+function updateBadge(hz){document.getElementById('badge-'+hz).textContent=state[hz].cards.length;}
+function updateEmpty(hz){document.getElementById('empty-'+hz).style.display=state[hz].cards.length?'none':'flex';}
+function applyVP(hz){document.getElementById('vp-'+hz).style.transform=`translate(${vs[hz].x}px,${vs[hz].y}px) scale(${vs[hz].s})`;}
+function syncTabSub(hz,v){document.getElementById('ts-'+hz).textContent=v;}
+function showToast(m){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function autoResize(t){t.style.height='auto';t.style.height=t.scrollHeight+'px';}
 
 // INIT
-window.addEventListener('DOMContentLoaded', () => {
-  loadAll();
-});
+loadAll();
+HZS.forEach(hz=>updateEmpty(hz));
 </script>
 </body>
 </html>
